@@ -13,13 +13,13 @@ parser.add_argument('fl',metavar='file',help='AT1/bath file from SeaBird')
 args = parser.parse_args()
 
 # Find the cal part
-cal = re.compile(r".+(?=\s{14,}Drift)")
+cal = r".+(?=\s{14,}Drift)"
 # Find the autosal part
-sal = re.compile(r"(?=\bDrift).+")
+sal = r"(?=\bDrift).+"
 
 # Read the file
 with open(args.fl,'r') as f:
-  data = f.read()
-  # print(data)
-  calOut = cal.match(data)
-  print(calOut)
+  fl = f.read()
+  calOut = re.search(cal,fl,re.DOTALL)
+  salOut = re.search(sal,fl,re.DOTALL)
+
