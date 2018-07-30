@@ -1,0 +1,88 @@
+Artificial Seawater Calibration Version 10.4.4 13:52:52 05-Jun-18
+Calibration Temperatures: 32.5 29.0 24.0 18.5 15.0 4.5 1.0
+Serial Numbers: 1203 1548 1634 1763 1850 1854 1923 1955 2126 2239  
+Zero Frequencies: none none none none none none none none none none none none
+Chiller Temperatures: 30 26 20 13 9 -4 -8
+wait std, slope and time: 0.001 0.005 7200
+cal std, slope and time: 0.001 0.002 600
+salinity sample fill time: 130
+salinity sample bottles: 7 8 9
+Temperature Reference: 2713 Last Cal Date: 13-Feb-17
+Conductivity Reference: 3087 Last Cal Date: 23-Feb-18
+Coefficients: #4.365484e-03
+#6.279290e-04
+#2.122928e-05
+#1.768819e-06
+#0.000000e+00
+
+
+
+06/05/18  17:27:01  Start Time: 2018-06-05 17:17:04
+Bath Temperature: 32.5001 Standard Deviation: 0.000192 Slope: 0.00000018 Temp Freq: 6288.0504 Duty Cycle: 35.0
+Bath Conductivity: 6.071919 Standard Deviation: 0.000033 Slope: 0.00000018 Cond Freq: 7.2043
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+
+
+06/05/18  21:23:43  Start Time: 2018-06-05 21:13:47
+Bath Temperature: 29.0000 Standard Deviation: 0.000134 Slope: 0.00000037 Temp Freq: 5882.5721 Duty Cycle: 30.0
+Bath Conductivity: 5.700308 Standard Deviation: 0.000017 Slope: 0.00000005 Cond Freq: 7.0135
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+
+
+06/06/18  02:03:40  Start Time: 2018-06-06 01:53:43
+Bath Temperature: 24.0000 Standard Deviation: 0.000092 Slope: 0.00000004 Temp Freq: 5335.5050 Duty Cycle: 25.0
+Bath Conductivity: 5.177928 Standard Deviation: 0.000014 Slope: 0.00000000 Cond Freq: 6.7362
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+
+
+06/06/18  07:04:03  Start Time: 2018-06-06 06:54:06
+Bath Temperature: 18.5000 Standard Deviation: 0.000078 Slope: 0.00000001 Temp Freq: 4776.2105 Duty Cycle: 26.0
+Bath Conductivity: 4.619057 Standard Deviation: 0.000010 Slope: 0.00000000 Cond Freq: 6.4261
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+
+
+06/06/18  11:15:02  Start Time: 2018-06-06 11:05:06
+Bath Temperature: 15.0000 Standard Deviation: 0.000098 Slope: 0.00000003 Temp Freq: 4442.7575 Duty Cycle: 24.0
+Bath Conductivity: 4.273335 Standard Deviation: 0.000009 Slope: 0.00000000 Cond Freq: 6.2265
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+
+
+06/06/18  19:16:54  Start Time: 2018-06-06 19:06:57
+Bath Temperature: 4.5000 Standard Deviation: 0.000171 Slope: -0.00000008 Temp Freq: 3542.4120 Duty Cycle: 26.0
+Bath Conductivity: 3.289757 Standard Deviation: 0.000008 Slope: -0.00000002 Cond Freq: 5.6196
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+
+
+06/06/18  23:55:33  Start Time: 2018-06-06 23:45:37
+Bath Temperature: 1.0000 Standard Deviation: 0.000201 Slope: 0.00000002 Temp Freq: 3274.1380 Duty Cycle: 22.0
+Bath Conductivity: 2.982120 Standard Deviation: 0.000008 Slope: 0.00000001 Cond Freq: 5.4157
+Bath Oxygen 1: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+Bath Oxygen 2: 0.000 Standard Deviation: 0.0000 Slope: 0.0000 Oxygen Freq: -10.00
+ Serial Number, Instrument Output, Standard Deviation, Number of Samples
+
+Reference Summary 23:56:02 06-Jun-18
+32.5001,6.071919
+29.0000,5.700308
+24.0000,5.177928
+18.5000,4.619057
+15.0000,4.273335
+4.5000,3.289757
+1.0000,2.982120
