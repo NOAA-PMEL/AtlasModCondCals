@@ -7,12 +7,12 @@ fi
 
 cell_list=$@
 
-MYSQL="/Users/white/mp/bin/mysql -N -h yawl TAO_cal"
+MYSQL="mysql -N -h yawl TAO_cal"
 
 echo;
 for cell in ${cell_list}
 do
-   sql="SELECT TempInfo.module_type,TempInfo.color,TempInfo.sensor_id,ModCell.cell_id \
+   sql="SELECT TempInfo.module_type,TempInfo.sensor_id,ModCell.cell_id \
 FROM TempInfo,ModCell \
 WHERE TempInfo.sensor_id=ModCell.module_id \
 AND cell_type='C' \
