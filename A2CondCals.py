@@ -20,7 +20,7 @@ args = parser.parse_args()
 # Regex for cal, autosal, and cells
 cal = r".+(?=\s{10,}Drift)"
 sal = r"(?=\bDrift).+"
-cell = r"(?<=Serial Numbers:\s)([\s\d]{4}){10,}"
+cell = r"(?<=Serial Numbers:\s)([\s\d]{4}){5,}"
 
 # Read the file & make the strings needed for new files
 with open(args.fl, "r") as f:
