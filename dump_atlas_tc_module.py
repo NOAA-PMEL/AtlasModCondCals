@@ -1,19 +1,18 @@
 #!/usr/bin/env python
+"""
+Script/Module for dumping Atlas TC/SSC modules after calibration at SeaBird
+"""
 
+import os, time, sys, re, argparse, logging
 import serial
 import serial.tools.list_ports
-import os
-import time
-import sys
-import re
-import argparse
-import logging
 
-logger = None
-flogger = None
+LOGGER = None
+FLOGGER = None
 try:
     import colorlog
-    logger = colorlog.getLogger("ModuleDumper")
+
+    LOGGER = colorlog.getLogger("ModuleDumper")
     sh = colorlog.StreamHandler()
     sh.setFormatter(
         colorlog.ColoredFormatter(
@@ -28,11 +27,11 @@ try:
         )
     )
 except:
-    logger = logging.getLogger('ModuleDumper')
+    LOGGER = logging.getLogger("ModuleDumper")
     sh = logging.StreamHandler()
     # handler.setFormatter(logging.Formatter(' * %(name)s : %(message)s'))
-    sh.setFormatter(logging.Formatter('\033[1;31m%(name)s : %(message)s\033[0m'))
-logger.addHandler(sh)
+    sh.setFormatter(logging.Formatter("\033[1;31m%(name)s : %(message)s\033[0m"))
+LOGGER.addHandler(sh)
 
 # patterns and formats
 ######################
@@ -97,8 +96,8 @@ class ModuleMeta(object):
                         self.dumpdt = time.mktime(time.strptime(meta, moddtfmt))
                     except:
                         self.nodump = True
-                        self.comment += (
-                            " *** Cannot read module date/time: {}\n".format(meta)
+                        self.comment += " *** Cannot read module date/time: {}\n".format(
+                            meta
                         )
                     continue
 
@@ -129,7 +128,10 @@ class ModuleMeta(object):
             if pat in line:
                 meta = line[22:].strip()
                 self.sampintv = meta
-                if meta != "00:02:00":
+                if meta == "00:01:00":
+                    self.nodump = False
+                    self.comment += " *** Sample interval is {}\n".format(meta)
+                elif meta != "00:02:00":
                     self.nodump = True
                     self.comment += " *** Sample interval is {}\n".format(meta)
                 continue
@@ -170,77 +172,85 @@ class ModuleMeta(object):
             sys.stderr.write("\n{}\n\n".format(self.prefix))
 
         sys.stderr.write("\n")
-        logger.info("Module Type        : {}".format(self.modtype))
-        logger.info("Module Serial      : {}".format(self.modserial))
-        logger.info("Cell Serial        : {}".format(self.cellserial))
-        logger.info("Cond I/O Serial    : {}".format(self.ioserial))
+        LOGGER.info("Module Type        : {}".format(self.modtype))
+        LOGGER.info("Module Serial      : {}".format(self.modserial))
+        LOGGER.info("Cell Serial        : {}".format(self.cellserial))
+        LOGGER.info("Cond I/O Serial    : {}".format(self.ioserial))
 
         sys.stderr.write("\n")
-        logger.info(
-            "Computer Time      : {}"
-            .format(time.strftime(isofmt, time.localtime(compclock)),)
+        LOGGER.info(
+            "Computer Time      : {}".format(
+                time.strftime(isofmt, time.localtime(compclock))
+            )
         )
         if self.nodump:
-            logger.warning(
-                "Module Time        : {}"
-                .format(time.strftime(isofmt, time.localtime(self.dumpdt)),)
+            LOGGER.warning(
+                "Module Time        : {}".format(
+                    time.strftime(isofmt, time.localtime(self.dumpdt))
+                )
             )
         else:
-            logger.info(
-                "Module Time        : {}"
-                .format(time.strftime(isofmt, time.localtime(self.dumpdt)),)
+            LOGGER.info(
+                "Module Time        : {}".format(
+                    time.strftime(isofmt, time.localtime(self.dumpdt))
+                )
             )
         if self.badclock:
-            logger.warning(
-                "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}"
-                .format(dtsign, dtdays, dthours, dtmins, dtsecs)
+            LOGGER.warning(
+                "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}".format(
+                    dtsign, dtdays, dthours, dtmins, dtsecs
+                )
             )
         else:
-            logger.info(
-                "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}"
-                .format(dtsign, dtdays, dthours, dtmins, dtsecs)
+            LOGGER.info(
+                "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}".format(
+                    dtsign, dtdays, dthours, dtmins, dtsecs
+                )
             )
 
         sys.stderr.write("\n")
-        logger.info("Voltage            : {}".format(self.voltage))
+        LOGGER.info("Voltage            : {}".format(self.voltage))
         if self.nodump:
-            logger.warning("Sample Interval    : {}".format(self.sampintv))
-            logger.warning("Average Interval   : {} hours".format(int(self.avgintv),))
+            LOGGER.warning("Sample Interval    : {}".format(self.sampintv))
+            LOGGER.warning("Average Interval   : {} hours".format(int(self.avgintv)))
         else:
-            logger.info("Sample Interval    : {}".format(self.sampintv))
-            logger.info("Average Interval   : {} hours".format(int(self.avgintv),))
-        logger.info("Number of Records  : {}".format(int(self.ndumprec),))
+            LOGGER.info("Sample Interval    : {}".format(self.sampintv))
+            LOGGER.info("Average Interval   : {} hours".format(int(self.avgintv)))
+        LOGGER.info("Number of Records  : {}".format(int(self.ndumprec)))
         sys.stderr.write("\n")
         if self.cafe:
-            logger.warning("*** Downloaded data include blocks with sync field 'CAFE'")
+            LOGGER.warning("*** Downloaded data include blocks with sync field 'CAFE'")
             sys.stderr.write("\n")
 
         if not prefix:
-            flogger.info("\nModule Type        : {}".format(self.modtype))
-            flogger.info("Module Serial      : {}".format(self.modserial))
-            flogger.info("Cell Serial        : {}".format(self.cellserial))
-            flogger.info("Cond I/O Serial    : {}".format(self.ioserial))
-            flogger.info(
-                "\nComputer Time      : {}"
-                .format(time.strftime(isofmt, time.localtime(compclock)),)
+            FLOGGER.info("\nModule Type        : {}".format(self.modtype))
+            FLOGGER.info("Module Serial      : {}".format(self.modserial))
+            FLOGGER.info("Cell Serial        : {}".format(self.cellserial))
+            FLOGGER.info("Cond I/O Serial    : {}".format(self.ioserial))
+            FLOGGER.info(
+                "\nComputer Time      : {}".format(
+                    time.strftime(isofmt, time.localtime(compclock))
+                )
             )
-            flogger.info(
-                "Module Time        : {}"
-                .format(time.strftime(isofmt, time.localtime(self.dumpdt)),)
+            FLOGGER.info(
+                "Module Time        : {}".format(
+                    time.strftime(isofmt, time.localtime(self.dumpdt))
+                )
             )
-            flogger.info(
-                "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}"
-                .format(dtsign, dtdays, dthours, dtmins, dtsecs)
+            FLOGGER.info(
+                "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}".format(
+                    dtsign, dtdays, dthours, dtmins, dtsecs
+                )
             )
-            flogger.info("\nVoltage            : {}".format(self.voltage))
-            flogger.info("Sample Interval    : {}".format(self.sampintv))
-            flogger.info("Average Interval   : {} hours".format(int(self.avgintv),))
-            flogger.info("Number of Records  : {}\n".format(int(self.ndumprec),))
+            FLOGGER.info("\nVoltage            : {}".format(self.voltage))
+            FLOGGER.info("Sample Interval    : {}".format(self.sampintv))
+            FLOGGER.info("Average Interval   : {} hours".format(int(self.avgintv)))
+            FLOGGER.info("Number of Records  : {}\n".format(int(self.ndumprec)))
             if self.cafe:
-                flogger.info(
+                FLOGGER.info(
                     "*** Downloaded data include blocks with sync field 'CAFE'"
                 )
-            flogger.info("\n-----\n")
+            FLOGGER.info("\n-----\n")
 
 
 def ask_for_port():
@@ -267,7 +277,7 @@ def ask_for_port():
             try:
                 index = port - 1
                 if not 0 <= index < len(ports):
-                    logger.warning("*** Invalid index!")
+                    LOGGER.warning("*** Invalid index!")
                     continue
             except ValueError:
                 pass
@@ -275,7 +285,7 @@ def ask_for_port():
                 port = ports[index]
             return port
     else:
-        logger.warning("*** No serial ports detected ... aborting")
+        LOGGER.warning("*** No serial ports detected ... aborting")
         sys.exit(0)
 
 
@@ -284,7 +294,7 @@ def clear_input_buffer(ser):
     Write any extraneous serial input to stderr (like 'ENTERING MONITOR SNOOZE')
     """
     sys.stderr.write("\n")
-    logger.warning("***** Unprocessed input buffer content *****")
+    LOGGER.warning("***** Unprocessed input buffer content *****")
     sys.stderr.write("\n")
     capture = ""
     rx = 1
@@ -293,9 +303,9 @@ def clear_input_buffer(ser):
         if rx:
             capture += rx.decode()
     if capture != "":
-        logger.info(capture.strip())
+        LOGGER.info(capture.strip())
     sys.stderr.write("\n")
-    logger.warning("********************************************")
+    LOGGER.warning("********************************************")
     sys.stderr.write("\n")
     ser.reset_input_buffer()
 
@@ -312,7 +322,7 @@ def wake_tc_get_header(ser, debug=0):
     for c in command:
         n = ser.write(c.encode())
         if debug:
-            logger.debug("{} byte ({}) written to port".format(n, repr(c)))
+            LOGGER.debug("{} byte ({}) written to port".format(n, repr(c)))
         time.sleep(0.1)
 
     utc = time.gmtime()
@@ -324,7 +334,7 @@ def wake_tc_get_header(ser, debug=0):
         rx = ser.read(ser.in_waiting or 1).decode()
         if rx:
             if debug:
-                logger.debug(rx)
+                LOGGER.debug(rx)
             capture += rx
 
     if capture.strip():
@@ -373,7 +383,7 @@ def send_cmd(ser, command, debug=0):
     for c in command:
         n = ser.write(c.encode())
         if debug:
-            logger.debug("{} byte ({}) written to port".format(n, repr(c)))
+            LOGGER.debug("{} byte ({}) written to port".format(n, repr(c)))
         time.sleep(0.1)
 
     out = ""
@@ -383,7 +393,7 @@ def send_cmd(ser, command, debug=0):
         if rx:
             out += rx.decode()
             if debug:
-                logger.debug(rx)
+                LOGGER.debug(rx)
 
     return out
 
@@ -405,7 +415,7 @@ def dump_data(ser, meta, args):
         #      sys.stderr.write(rx)
         ntry += 1
         if ntry > 3:
-            logger.warning("Wrong response to dump command ({})".format(command,))
+            LOGGER.warning("Wrong response to dump command ({})".format(command))
             return 0
 
     command = "Y"
@@ -416,13 +426,13 @@ def dump_data(ser, meta, args):
         # sys.stderr.write(rx)
         ntry += 1
         if ntry > 3:
-            logger.warning("Wrong response to dump command ({})".format(command,))
+            LOGGER.warning("Wrong response to dump command ({})".format(command))
             return 0
 
     c = "\r"
     n = ser.write(c.encode())
     if args.debug:
-        logger.debug("{} byte ({}) written to port\n".format(n, repr(c)))
+        LOGGER.debug("{} byte ({}) written to port\n".format(n, repr(c)))
     time.sleep(0.05)
 
     dumpst = time.time()
@@ -454,15 +464,15 @@ def dump_data(ser, meta, args):
     fsize = os.stat(fname).st_size
     sys.stderr.write("\n\n")
     if meta.badclock or meta.cafe:
-        logger.warning("Wrote {} bytes to {}".format(fsize, fname))
+        LOGGER.warning("Wrote {} bytes to {}".format(fsize, fname))
     else:
-        logger.info("Wrote {} bytes to {}".format(fsize, fname))
-    logger.info(
+        LOGGER.info("Wrote {} bytes to {}".format(fsize, fname))
+    LOGGER.info(
         "Dumped {} records in {:.1f} seconds".format(meta.ndumprec, (dumpend - dumpst))
     )
 
-    flogger.info("Wrote {} bytes to {}".format(fsize, fname))
-    flogger.info(
+    FLOGGER.info("Wrote {} bytes to {}".format(fsize, fname))
+    FLOGGER.info(
         "Dumped {} records in {:.1f} seconds".format(meta.ndumprec, (dumpend - dumpst))
     )
 
@@ -492,7 +502,7 @@ parser.add_argument(
     dest="calday",
     default="xxx",
     help="Day-of-year for calibration (001-366)",
-    required=True
+    required=True,
 )
 parser.add_argument(
     "--clock",
@@ -535,7 +545,7 @@ args = parser.parse_args()
 if args.path.endswith("/"):
     args.path = args.path[:-1]
 
-logger.setLevel(args.loglevel.upper())
+LOGGER.setLevel(args.loglevel.upper())
 
 port = ask_for_port()
 
@@ -543,7 +553,7 @@ port = ask_for_port()
 try:
     ser = serial.Serial(port, timeout=2, inter_byte_timeout=0.1, xonxoff=True)
 except:
-    logger.warning(" *** Unknown serial port: '{}' ... aborting".format(port))
+    LOGGER.warning(" *** Unknown serial port: '{}' ... aborting".format(port))
     sys.exit(1)
 time.sleep(1)
 
@@ -551,22 +561,22 @@ if ser.isOpen():
 
     sys.stderr.write("Serial port is open ...\n\n")
     flogname = "{}/sb{}_{}.log".format(
-        args.path,
-        args.calday,
-        time.strftime("%d%b%Y-%H%M", time.localtime()),
+        args.path, args.calday, time.strftime("%d%b%Y-%H%M", time.localtime())
     )
-    flogger = logging.getLogger("SessionLog")
+    FLOGGER = logging.getLogger("SessionLog")
     fh = logging.FileHandler(flogname)
     fh.setFormatter(logging.Formatter("%(message)s"))
-    flogger.addHandler(fh)
-    flogger.setLevel(logging.INFO)
+    FLOGGER.addHandler(fh)
+    FLOGGER.setLevel(logging.INFO)
 
     while True:
 
         if ser.in_waiting:
             clear_input_buffer(ser)
 
-        select = eval('input("Connect to module and Enter module type (T:TC, S:SSC) or X to Exit : ")')
+        select = eval(
+            'input("Connect to module and Enter module type (T:TC, S:SSC) or X to Exit : ")'
+        )
 
         if select.upper() not in ("X", "S", "T"):
             continue
@@ -593,14 +603,14 @@ if ser.isOpen():
                 if modmeta.parseheader():
                     modmeta.meta_summary(tmcheck, int(args.clocksecs), 1)
                 else:
-                    logger.warning(
+                    LOGGER.warning(
                         "Could not parse header: {}".format(repr(modmeta.rawheader))
                     )
                     if ser.in_waiting:
                         clear_input_buffer(ser)
                     continue
             else:
-                logger.warning("Header not dumped")
+                LOGGER.warning("Header not dumped")
                 if ser.in_waiting:
                     clear_input_buffer(ser)
                 continue
@@ -609,7 +619,7 @@ if ser.isOpen():
             continue
 
         if modmeta.nodump:
-            logger.warning("Download aborted:\n{}".format(modmeta.comment))
+            LOGGER.warning("Download aborted:\n{}".format(modmeta.comment))
             continue
 
         yorn = eval('input("Download data from this module? [Y/n] : ")')
@@ -627,6 +637,6 @@ if ser.isOpen():
 
 else:
     sys.stderr.write("\n")
-    logger.warning("*** Serial port {} not opened ***".format(port))
+    LOGGER.warning("*** Serial port {} not opened ***".format(port))
 
 sys.exit()
