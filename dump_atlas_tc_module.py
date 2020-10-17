@@ -6,6 +6,7 @@ Script/Module for dumping Atlas TC/SSC modules after calibration at SeaBird
 import os, time, sys, re, argparse, logging
 import serial
 import serial.tools.list_ports
+import ntplib
 
 LOGGER = None
 FLOGGER = None
@@ -96,8 +97,8 @@ class ModuleMeta(object):
                         self.dumpdt = time.mktime(time.strptime(meta, moddtfmt))
                     except:
                         self.nodump = True
-                        self.comment += " *** Cannot read module date/time: {}\n".format(
-                            meta
+                        self.comment += (
+                            " *** Cannot read module date/time: {}\n".format(meta)
                         )
                     continue
 
@@ -253,6 +254,27 @@ class ModuleMeta(object):
             FLOGGER.info("\n-----\n")
 
 
+def check_ntp_server(ntpserv):
+    """
+    Make an initial comparison of local system time with NTP server
+    """
+    sys.stderr.write("\n--- Network Time Server Check ---\n")
+
+    try:
+        client = ntplib.NTPClient()
+        response = client.request(ntpserv)
+        sys.stderr.write(
+            "*** localhost system clock is {:02d} seconds behind time server {} ***\n\n".format(
+                response.delay, ntpserv
+            )
+        )
+    except:
+        sys.stderr.write(
+            "*** time server {} not found, using localhost system clock ***"
+        )
+    sys.stderr.flush()
+
+
 def ask_for_port():
     """
     Show a list of ports and ask the user for a choice. To make selection
@@ -268,14 +290,14 @@ def ask_for_port():
         # sys.stderr.write(' {:2}: {:20}\n\n'.format(n, port))
         sys.stderr.write(" {:2}: {:20}: {}\n".format(n, port, desc))
         ports.append(port)
-    if len(ports):
+    if ports:
         while True:
-            port = eval(input("\n--- Enter port index or full name or X to exit: "))
+            port = input("\n--- Enter port index or full name or X to exit: ")
             sys.stderr.write("\n")
             if isinstance(port, str) and port.upper() == "X":
                 sys.exit(0)
             try:
-                index = port - 1
+                index = int(port) - 1
                 if not 0 <= index < len(ports):
                     LOGGER.warning("*** Invalid index!")
                     continue
@@ -310,7 +332,7 @@ def clear_input_buffer(ser):
     ser.reset_input_buffer()
 
 
-def wake_tc_get_header(ser, debug=0):
+def wake_tc_get_header(ser, ntpserv, debug=0):
     """
     Send Ctrl-C Ctrl-C to TC module to wake it up, capture header content
     Get computer's UTC time for comparison to time reported in module header
@@ -325,9 +347,14 @@ def wake_tc_get_header(ser, debug=0):
             LOGGER.debug("{} byte ({}) written to port".format(n, repr(c)))
         time.sleep(0.1)
 
-    utc = time.gmtime()
-    timecheck = time.mktime(tuple(list(utc[:8]) + [time.localtime().tm_isdst]))
-    # timecheck = time.mktime(time.gmtime())
+    try:
+        client = ntplib.NTPClient()
+        response = client.request(ntpserv)
+        timecheck = (time.mktime(time.gmtime(response.tx_time)), 1)
+    except:
+        utc = time.gmtime()
+        timecheck = (time.mktime(list(utc[:8]) + [time.localtime().tm_isdst]), 0)
+
     capture = ""
     rx = 1
     while rx:
@@ -342,7 +369,7 @@ def wake_tc_get_header(ser, debug=0):
     return None, None
 
 
-def wake_ssc_get_header(ser, debug=0):
+def wake_ssc_get_header(ser, ntpserv, debug=0):
     """
     Wait 10 seconds for response to waking SSC module, capture header content
     Get computer's UTC time for comparison to time reported in module header
@@ -356,9 +383,15 @@ def wake_ssc_get_header(ser, debug=0):
         if xloop > 1000:
             return None, None
         time.sleep(0.01)
-    utc = time.gmtime()
-    timecheck = time.mktime(tuple(list(utc[:8]) + [time.localtime().tm_isdst]))
-    # timecheck = time.mktime(time.gmtime())
+
+    try:
+        client = ntplib.NTPClient()
+        response = client.request(ntpserv)
+        timecheck = (time.mktime(time.gmtime(response.tx_time)), 1)
+    except:
+        utc = time.gmtime()
+        timecheck = (time.mktime(list(utc[:8]) + [time.localtime().tm_isdst]), 0)
+
     capture = ""
     rx = 1
     while rx:
