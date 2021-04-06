@@ -3,10 +3,17 @@
 Script/Module for dumping Atlas TC/SSC modules after calibration at SeaBird
 """
 
-import os, time, sys, re, argparse, logging
+import os, time, sys, re, argparse, logging, ntplib
 import serial
 import serial.tools.list_ports
-import ntplib
+from datetime import datetime, timedelta
+
+prompt_input = None
+py3 = sys.version_info[0] > 2
+if py3:
+    prompt_input = input
+else:
+    prompt_input = raw_input
 
 LOGGER = None
 FLOGGER = None
@@ -44,6 +51,7 @@ crlfpat = re.compile(r" *\r\n")
 linend = "\n"
 isofmt = "%Y-%m-%d %H:%M:%S"
 moddtfmt = "%m/%d/%Y %H:%M:%S"
+etfmt = "%H:%M:%S"
 
 
 class ModuleMeta(object):
@@ -94,7 +102,7 @@ class ModuleMeta(object):
                 matchobj = dtpat.match(meta)
                 if matchobj:
                     try:
-                        self.dumpdt = time.mktime(time.strptime(meta, moddtfmt))
+                        self.dumpdt = datetime.strptime(meta, moddtfmt)
                     except:
                         self.nodump = True
                         self.comment += (
@@ -157,7 +165,7 @@ class ModuleMeta(object):
         Check module clock against computer clock
         Print metadata summary
         """
-        dtdelta = int(compclock - self.dumpdt)
+        dtdelta = (compclock - self.dumpdt).total_seconds()
         dtdays = int(abs(dtdelta) / 86400)
         dthours = int((abs(dtdelta) - (dtdays * 86400)) / 3600)
         dtmins = int((abs(dtdelta) - (dtdays * 86400) - (dthours * 3600)) / 60)
@@ -179,23 +187,13 @@ class ModuleMeta(object):
         LOGGER.info("Cond I/O Serial    : {}".format(self.ioserial))
 
         sys.stderr.write("\n")
-        LOGGER.info(
-            "Computer Time      : {}".format(
-                time.strftime(isofmt, time.localtime(compclock))
-            )
-        )
+        LOGGER.info("Computer Time      : {}".format(compclock.strftime(isofmt)))
         if self.nodump:
             LOGGER.warning(
-                "Module Time        : {}".format(
-                    time.strftime(isofmt, time.localtime(self.dumpdt))
-                )
+                "Module Time        : {}".format(self.dumpdt.strftime(isofmt))
             )
         else:
-            LOGGER.info(
-                "Module Time        : {}".format(
-                    time.strftime(isofmt, time.localtime(self.dumpdt))
-                )
-            )
+            LOGGER.info("Module Time        : {}".format(self.dumpdt.strftime(isofmt)))
         if self.badclock:
             LOGGER.warning(
                 "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}".format(
@@ -228,16 +226,8 @@ class ModuleMeta(object):
             FLOGGER.info("Module Serial      : {}".format(self.modserial))
             FLOGGER.info("Cell Serial        : {}".format(self.cellserial))
             FLOGGER.info("Cond I/O Serial    : {}".format(self.ioserial))
-            FLOGGER.info(
-                "\nComputer Time      : {}".format(
-                    time.strftime(isofmt, time.localtime(compclock))
-                )
-            )
-            FLOGGER.info(
-                "Module Time        : {}".format(
-                    time.strftime(isofmt, time.localtime(self.dumpdt))
-                )
-            )
+            FLOGGER.info("\nComputer Time      : {}".format(compclock.strftime(isofmt)))
+            FLOGGER.info("Module Time        : {}".format(self.dumpdt.strftime(isofmt)))
             FLOGGER.info(
                 "Module Clock Error : {} {} d {:02d}:{:02d}:{:02d}".format(
                     dtsign, dtdays, dthours, dtmins, dtsecs
@@ -258,21 +248,27 @@ def check_ntp_server(ntpserv):
     """
     Make an initial comparison of local system time with NTP server
     """
-    sys.stderr.write("\n--- Network Time Server Check ---\n")
+    ntpcheck = "\n--- Network Time Server Check ---\n"
+    ntpoffset = 0.0
 
     try:
         client = ntplib.NTPClient()
         response = client.request(ntpserv)
-        sys.stderr.write(
-            "*** localhost system clock is {:02d} seconds behind time server {} ***\n\n".format(
-                response.delay, ntpserv
+        ntpoffset = response.offset
+        if ntpoffset < 0:
+            ntpcheck += "*** localhost system clock is {:.2f} seconds ahead of time server {} ***\n---\n".format(
+                abs(ntpoffset), ntpserv
             )
-        )
+        else:
+            ntpcheck += "*** localhost system clock is {:.2f} seconds behind time server {} ***\n---\n".format(
+                abs(ntpoffset), ntpserv
+            )
     except:
-        sys.stderr.write(
-            "*** time server {} not found, using localhost system clock ***"
+        ntpcheck += "*** time server {} not found, using uncorrected localhost system clock ***\n---\n".format(
+            ntpserv
         )
-    sys.stderr.flush()
+
+    return (ntpoffset, ntpcheck)
 
 
 def ask_for_port():
@@ -290,11 +286,13 @@ def ask_for_port():
         # sys.stderr.write(' {:2}: {:20}\n\n'.format(n, port))
         sys.stderr.write(" {:2}: {:20}: {}\n".format(n, port, desc))
         ports.append(port)
-    if ports:
+    if len(ports):
         while True:
-            port = input("\n--- Enter port index or full name or X to exit: ")
+            port = prompt_input("\n--- Enter port index or full name or X to exit: ")
+
             sys.stderr.write("\n")
-            if isinstance(port, str) and port.upper() == "X":
+
+            if port.upper() == "X":
                 sys.exit(0)
             try:
                 index = int(port) - 1
@@ -323,16 +321,16 @@ def clear_input_buffer(ser):
     while rx:
         rx = ser.read(ser.in_waiting or 1)
         if rx:
-            capture += rx.decode()
+            capture += rx.decode(errors="replace")
     if capture != "":
         LOGGER.info(capture.strip())
     sys.stderr.write("\n")
-    LOGGER.warning("********************************************")
+    LOGGER.warning("*" * 44)
     sys.stderr.write("\n")
     ser.reset_input_buffer()
 
 
-def wake_tc_get_header(ser, ntpserv, debug=0):
+def wake_tc_get_header(ser, ntpoffset, debug=0):
     """
     Send Ctrl-C Ctrl-C to TC module to wake it up, capture header content
     Get computer's UTC time for comparison to time reported in module header
@@ -340,25 +338,20 @@ def wake_tc_get_header(ser, ntpserv, debug=0):
     """
     ser.reset_input_buffer()
     ser.reset_output_buffer()
-    command = "\x03\x03"
-    for c in command:
-        n = ser.write(c.encode())
+
+    wakeup = b"\x03\x03"
+    for b in serial.iterbytes(wakeup):
+        n = ser.write(b)
         if debug:
-            LOGGER.debug("{} byte ({}) written to port".format(n, repr(c)))
+            LOGGER.debug("{} byte ({}) written to port".format(n, b))
         time.sleep(0.1)
 
-    try:
-        client = ntplib.NTPClient()
-        response = client.request(ntpserv)
-        timecheck = (time.mktime(time.gmtime(response.tx_time)), 1)
-    except:
-        utc = time.gmtime()
-        timecheck = (time.mktime(list(utc[:8]) + [time.localtime().tm_isdst]), 0)
+    timecheck = datetime.utcnow() + timedelta(seconds=ntpoffset)
 
     capture = ""
     rx = 1
     while rx:
-        rx = ser.read(ser.in_waiting or 1).decode()
+        rx = ser.read(ser.in_waiting or 1).decode(errors="replace")
         if rx:
             if debug:
                 LOGGER.debug(rx)
@@ -369,7 +362,7 @@ def wake_tc_get_header(ser, ntpserv, debug=0):
     return None, None
 
 
-def wake_ssc_get_header(ser, ntpserv, debug=0):
+def wake_ssc_get_header(ser, ntpoffset, debug=0):
     """
     Wait 10 seconds for response to waking SSC module, capture header content
     Get computer's UTC time for comparison to time reported in module header
@@ -384,18 +377,12 @@ def wake_ssc_get_header(ser, ntpserv, debug=0):
             return None, None
         time.sleep(0.01)
 
-    try:
-        client = ntplib.NTPClient()
-        response = client.request(ntpserv)
-        timecheck = (time.mktime(time.gmtime(response.tx_time)), 1)
-    except:
-        utc = time.gmtime()
-        timecheck = (time.mktime(list(utc[:8]) + [time.localtime().tm_isdst]), 0)
+    timecheck = datetime.utcnow() + timedelta(seconds=ntpoffset)
 
     capture = ""
     rx = 1
     while rx:
-        rx = ser.read(ser.in_waiting or 1).decode()
+        rx = ser.read(ser.in_waiting or 1).decode(errors="replace")
         if rx:
             if debug:
                 sys.stderr.write(rx)
@@ -413,10 +400,11 @@ def send_cmd(ser, command, debug=0):
     """
     ser.reset_input_buffer()
     ser.reset_output_buffer()
-    for c in command:
-        n = ser.write(c.encode())
+
+    for b in serial.iterbytes(command):
+        n = ser.write(b)
         if debug:
-            LOGGER.debug("{} byte ({}) written to port".format(n, repr(c)))
+            LOGGER.debug("{} byte ({}) written to port".format(n, b))
         time.sleep(0.1)
 
     out = ""
@@ -424,7 +412,7 @@ def send_cmd(ser, command, debug=0):
     while rx:
         rx = ser.read(ser.in_waiting or 1)
         if rx:
-            out += rx.decode()
+            out += rx.decode(errors="replace")
             if debug:
                 LOGGER.debug(rx)
 
@@ -440,7 +428,7 @@ def dump_data(ser, meta, args):
     ser.reset_input_buffer()
     ser.reset_output_buffer()
 
-    command = "TEXT.DUMP\r"
+    command = b"TEXT.DUMP\r"
     rx = ""
     ntry = 0
     while not rx or (rx.split()[-1] != "data?"):
@@ -451,7 +439,7 @@ def dump_data(ser, meta, args):
             LOGGER.warning("Wrong response to dump command ({})".format(command))
             return 0
 
-    command = "Y"
+    command = b"Y"
     rx = ""
     ntry = 0
     while not rx or (rx.split()[-1] != "ready"):
@@ -462,10 +450,10 @@ def dump_data(ser, meta, args):
             LOGGER.warning("Wrong response to dump command ({})".format(command))
             return 0
 
-    c = "\r"
-    n = ser.write(c.encode())
+    b = b"\r"
+    n = ser.write(b)
     if args.debug:
-        LOGGER.debug("{} byte ({}) written to port\n".format(n, repr(c)))
+        LOGGER.debug("{} byte ({}) written to port\n".format(n, repr(b)))
     time.sleep(0.05)
 
     dumpst = time.time()
@@ -478,14 +466,35 @@ def dump_data(ser, meta, args):
 
     fraw = ""
     rxline = 1
-    while rxline:
-        rxline = ser.readline()
-        if rxline:
-            sys.stdout.write(rxline.decode())
-            fout = crlfpat.sub(linend, rxline.decode())
-            if cafepat.search(fout):
-                meta.cafe = True
-            fh.write(fout)
+    try:
+        while rxline:
+            rxline = ser.readline()
+            if rxline:
+                sys.stdout.write(rxline.decode(errors="replace"))
+                fout = crlfpat.sub(linend, rxline.decode(errors="replace"))
+                if cafepat.search(fout):
+                    meta.cafe = True
+                fh.write(fout)
+    except KeyboardInterrupt:
+        interrupt = b"\x03"
+        send_cmd(ser, interrupt, args.debug)
+        #        time.sleep(1.0)
+        #         rxline = 1
+        #         while rxline:
+        #             rxline = ser.readline()
+        #             if rxline:
+        #                 sys.stdout.write(rxline.decode(errors='replace'))
+        #                 fout = crlfpat.sub(linend, rxline.decode(errors='replace'))
+        #                 fh.write(fout)
+        ser.reset_input_buffer()
+        fh.close()
+        fsize = os.stat(fname).st_size
+        frename = fname + "-abort"
+        os.rename(fname, frename)
+        sys.stderr.write("\n\n")
+        LOGGER.warning("Download aborted: wrote {} bytes to {}".format(fsize, frename))
+        return 0
+
     fh.close()
 
     if meta.cafe:
@@ -494,6 +503,9 @@ def dump_data(ser, meta, args):
         fname = frename
 
     dumpend = time.time()
+    etsec = dumpend - dumpst
+    dtet = datetime(1900, 1, 1, 0, 0, 0) + timedelta(seconds=etsec)
+
     fsize = os.stat(fname).st_size
     sys.stderr.write("\n\n")
     if meta.badclock or meta.cafe:
@@ -501,12 +513,12 @@ def dump_data(ser, meta, args):
     else:
         LOGGER.info("Wrote {} bytes to {}".format(fsize, fname))
     LOGGER.info(
-        "Dumped {} records in {:.1f} seconds".format(meta.ndumprec, (dumpend - dumpst))
+        "Dumped {} records in {} (hh:mm:ss)".format(meta.ndumprec, dtet.strftime(etfmt))
     )
 
     FLOGGER.info("Wrote {} bytes to {}".format(fsize, fname))
     FLOGGER.info(
-        "Dumped {} records in {:.1f} seconds".format(meta.ndumprec, (dumpend - dumpst))
+        "Dumped {} records in {} (hh:mm:ss)".format(meta.ndumprec, dtet.strftime(etfmt))
     )
 
     return fsize
@@ -546,6 +558,16 @@ parser.add_argument(
     help="Tolerance for flagging module clocktime (seconds)",
 )
 parser.add_argument(
+    "--ntp",
+    "--timeserver",
+    action="store",
+    dest="ntpserver",
+    default="pool.ntp.org",
+    #    default="time.apple.com",
+    #    default="bosun.pmel.noaa.gov",
+    help="Network time server to use",
+)
+parser.add_argument(
     "-v",
     "--verbose",
     "--debug",
@@ -580,6 +602,14 @@ if args.path.endswith("/"):
 
 LOGGER.setLevel(args.loglevel.upper())
 
+clockdelta = 0
+ntpcheck = ""
+try:
+    (clockdelta, ntpcheck) = check_ntp_server(args.ntpserver)
+    sys.stderr.write(ntpcheck)
+    sys.stderr.flush()
+except:
+    pass
 port = ask_for_port()
 
 # defaults are what is needed: 9600,N,8,1
@@ -590,7 +620,7 @@ except:
     sys.exit(1)
 time.sleep(1)
 
-if ser.isOpen():
+if ser.is_open:
 
     sys.stderr.write("Serial port is open ...\n\n")
     flogname = "{}/sb{}_{}.log".format(
@@ -601,14 +631,15 @@ if ser.isOpen():
     fh.setFormatter(logging.Formatter("%(message)s"))
     FLOGGER.addHandler(fh)
     FLOGGER.setLevel(logging.INFO)
+    FLOGGER.info(ntpcheck)
 
     while True:
 
         if ser.in_waiting:
             clear_input_buffer(ser)
 
-        select = eval(
-            'input("Connect to module and Enter module type (T:TC, S:SSC) or X to Exit : ")'
+        select = prompt_input(
+            "Connect to module and Enter module type (T:TC, S:SSC) or X to Exit : "
         )
 
         if select.upper() not in ("X", "S", "T"):
@@ -626,10 +657,10 @@ if ser.isOpen():
                 sys.stdout.write(
                     "Press white button switch on module CPU board to wake module (10 sec timeout)\n"
                 )
-                tmcheck, header = wake_ssc_get_header(ser, args.debug)
+                tmcheck, header = wake_ssc_get_header(ser, clockdelta, args.debug)
             # dump TC: control-C to start
             elif select.upper() == "T":
-                tmcheck, header = wake_tc_get_header(ser, args.debug)
+                tmcheck, header = wake_tc_get_header(ser, clockdelta, args.debug)
 
             if header and header.strip():
                 modmeta = ModuleMeta(header)
@@ -655,7 +686,7 @@ if ser.isOpen():
             LOGGER.warning("Download aborted:\n{}".format(modmeta.comment))
             continue
 
-        yorn = eval('input("Download data from this module? [Y/n] : ")')
+        yorn = prompt_input("Download data from this module? [Y/n] : ")
         if not yorn:
             yorn = "Y"
         if yorn.upper() != "Y":
