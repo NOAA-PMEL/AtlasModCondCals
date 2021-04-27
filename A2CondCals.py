@@ -1,8 +1,17 @@
 #!/usr/bin/env python
-## Building an automation script for Atlas Module CondCals
-## Author: Daryn White; daryn.white@noaa.gov
-## Last Edit: 2019-03-15 DAW
-import sys
+"""
+An automation script for Atlas Module CondCals.
+
+This script parses the SeaBird bath file into the .cal and .autosal
+files, creates the Julian date directory, and moves all files into the
+created directory. Should be run inside the target year directory.
+
+Example: ../2021 > A2CondCals 27Apr2021.AT1
+
+Author: Daryn White; daryn.white@noaa.gov
+Last Edit: 2021-04-27 DAW
+
+"""
 import os
 import subprocess
 import argparse
