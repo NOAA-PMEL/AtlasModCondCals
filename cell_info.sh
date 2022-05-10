@@ -1,11 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ $# -lt 1 ]; then
    echo "Must provide a space-separated list of cell numbers ... Aborting"
    exit
 fi
 
-cell_list=$*
+cells=("$@")
+cell_list=$(sort -n <(printf "%s\n" "${cells[@]}"))
 
 MYSQL="mysql -N -h yawl TAO_cal"
 
