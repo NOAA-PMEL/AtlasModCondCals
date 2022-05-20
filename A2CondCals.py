@@ -39,8 +39,8 @@ parser.add_argument("fl", metavar="file", help="Bath file from SeaBird")
 args = parser.parse_args()
 
 # Regex for cal, autosal, and cells
-cal = r".+(?=\s{10,}Drift)"
-sal = r"(?=\bDrift).+"
+cal = r".+(?=\s{5,}(Drift|Bottle))"
+sal = r"(?=\b(Drift|Bottle)\s).+"
 cell = r"(?<=Serial Numbers:\s)([\s\d]{4}){5,}"
 zero = r"Duty Cycle: 0\.0"
 
