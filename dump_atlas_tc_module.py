@@ -9,11 +9,8 @@ import serial.tools.list_ports
 from datetime import datetime, timedelta
 
 prompt_input = None
-py3 = sys.version_info[0] > 2
-if py3:
-    prompt_input = input
-else:
-    prompt_input = raw_input
+
+prompt_input = input
 
 LOGGER = None
 FLOGGER = None
@@ -85,7 +82,6 @@ class ModuleMeta(object):
         Read the output of the wakeup or STATUS command, extract metadata
         """
         for line in self.rawheader.split("\n"):
-
             pat = "QUITTING"
             if pat in line:
                 self.prefix = line
@@ -621,10 +617,9 @@ except:
 time.sleep(1)
 
 if ser.is_open:
-
     sys.stderr.write("Serial port is open ...\n\n")
     flogname = "{}/sb{}_{}.log".format(
-        args.path, args.calday, time.strftime("%d%b%Y-%H%M", time.localtime())
+        args.path, args.calday, time.strftime("%d%b%Y-%H%M%S", time.localtime())
     )
     FLOGGER = logging.getLogger("SessionLog")
     fh = logging.FileHandler(flogname)
@@ -634,7 +629,6 @@ if ser.is_open:
     FLOGGER.info(ntpcheck)
 
     while True:
-
         if ser.in_waiting:
             clear_input_buffer(ser)
 
