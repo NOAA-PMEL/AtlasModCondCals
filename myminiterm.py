@@ -22,12 +22,8 @@ from serial.tools import hexlify_codec
 
 codecs.register(lambda c: hexlify_codec.getregentry() if c == "hexlify" else None)
 
-try:
-    raw_input
-except NameError:
-    # pylint: disable=redefined-builtin,invalid-name
-    raw_input = input  # in python3 it's "raw"
-    unichr = chr
+raw_input = input  # in python3 it's "raw"
+unichr = chr
 
 
 def key_description(character):
@@ -134,7 +130,6 @@ if os.name == "nt":  # noqa
             hwnd = ctypes.windll.kernel32.GetConsoleWindow()
             ctypes.windll.user32.PostMessageA(hwnd, 0x100, 0x0D, 0)
 
-
 elif os.name == "posix":
     import atexit
     import termios
@@ -169,7 +164,6 @@ elif os.name == "posix":
 
         def cleanup(self):
             termios.tcsetattr(self.fd, termios.TCSAFLUSH, self.old)
-
 
 else:
     raise NotImplementedError(
