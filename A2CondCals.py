@@ -83,4 +83,4 @@ if not os.path.exists(baseName):
     os.rename(filePath, os.getcwd() + "/" + args.fl)
     out = subprocess.run("cell_info " + cells.group(), shell=True)
 else:
-    print("Directory already exists")
+    print(f"Directory {baseName} already exists")
