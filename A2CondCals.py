@@ -61,20 +61,22 @@ if badBath:
     raise DutyCycleError(
         f"Input File: {args.fl} has instances of 'Duty Cycle: 0.0'. DO NOT PROCESS!"
     )
+if not salOut or not calOut:
+    raise FileNotFoundError(f"Input file: {args.fl} does not have a proper Autosal run")
 
 # Establish usable vars
 baseName = "sb" + jdt
 filePath = os.path.abspath(args.fl)
-print(f"The new directory is: {baseName}")
 
 # Make the new directory and change to that working directory
 if not os.path.exists(baseName):
     os.makedirs(baseName)
+    print(f"The new directory is: {baseName}")
     os.chdir(baseName)
-    with open(baseName + ".autosal", "a") as salFile:
-        salFile.write(salOut.group())
     with open(baseName + ".cal", "a") as calFile:
         calFile.write(calOut.group())
+    with open(baseName + ".autosal", "a") as salFile:
+        salFile.write(salOut.group())
     with open(baseName + ".load", "a") as loadFile:
         ## Nothing, just a placeholder
         loadFile.write("")
