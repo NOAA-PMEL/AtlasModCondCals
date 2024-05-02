@@ -341,7 +341,7 @@ def wake_tc_get_header(ser, ntpoffset, debug=0):
         if debug:
             LOGGER.debug("{} byte ({}) written to port".format(n, b))
         time.sleep(0.1)
-
+    # TODO: Update the utcnow() call : datetime.now(UTC)
     timecheck = datetime.utcnow() + timedelta(seconds=ntpoffset)
 
     capture = ""
@@ -372,7 +372,7 @@ def wake_ssc_get_header(ser, ntpoffset, debug=0):
         if xloop > 1000:
             return None, None
         time.sleep(0.01)
-
+    # TODO: Update the utcnow() call
     timecheck = datetime.utcnow() + timedelta(seconds=ntpoffset)
 
     capture = ""
